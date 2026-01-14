@@ -7,6 +7,7 @@
 #include <array>
 template<typename T>
 class Node {
+    Node* parent{};
     std::array<T,3> keys{};
     std::array<Node*,4> children{};
     int nodesInserted = 0;

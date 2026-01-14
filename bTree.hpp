@@ -10,6 +10,7 @@ template<typename T>
 class BTree {
     using Node = Node<T>;
     Node* root{};
+    void split(Node* node);
 public:
     BTree()=default;
    void insert(T key);

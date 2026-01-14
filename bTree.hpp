@@ -9,7 +9,7 @@
 template<typename T>
 class BTree {
     using Node = Node<T>;
-    Node root{};
+    Node* root{};
 public:
     BTree()=default;
    void insert(T key);

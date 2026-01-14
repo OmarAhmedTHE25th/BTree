@@ -10,7 +10,7 @@ class Node {
     std::array<T,3> keys{};
     std::array<Node*,4> children{};
     int nodesInserted = 0;
-
+Node() = default;
     explicit Node(T key) {
         keys[nodesInserted++] = key;
     }

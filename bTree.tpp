@@ -21,7 +21,6 @@ while (i >= 0 && key < node->keys[i]) {
     // insert key
     node->keys[i + 1] = key;
     ++node->nodesInserted;
-
 }
 
 #endif //BTREE_BTREE_TPP

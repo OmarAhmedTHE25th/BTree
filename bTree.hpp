@@ -11,6 +11,7 @@ class BTree {
     using Node = Node<T>;
     Node* root{};
     void split(Node* node);
+    int search(T val);
 public:
     BTree()=default;
    void insert(T key);

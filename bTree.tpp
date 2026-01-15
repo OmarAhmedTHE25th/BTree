@@ -14,8 +14,8 @@ if (not root){root = new Node(key);return;}
     Node* node = root;
     if (node->nodesInserted==3) {
         split(node);
-
     }
+
 int i=node->nodesInserted - 1;
 while (i >= 0 && key < node->keys[i]) {
         node->keys[i + 1] = node->keys[i];
@@ -55,6 +55,14 @@ void BTree<T>::split(Node *node) {
     ++parent->nodesInserted;
     Node* left = new Node(node->keys[0]);
     Node* right = new Node(node->keys[2]);
+    int idx = 0;
+    while (idx <= parent->nodesInserted && parent->children[idx] != node)
+        idx++;
+    for (int k = parent->nodesInserted+1;k > idx+1; --k) {
+        parent->children[k+1] = parent->children[k];
+    }
+    parent->children[idx] = left;
+    parent->children[idx+1] = right;
     left->parent = node->parent;
     right ->parent = node->parent;
     left ->children[0] = node->children[0];
@@ -62,7 +70,27 @@ void BTree<T>::split(Node *node) {
     right ->children[0] = node->children[2];
     right ->children[1] = node->children[3];
 
+
     delete node;
 
+}
+
+template<typename T>
+int BTree<T>::search(T val) {
+    Node* current = root;
+    while (current) {
+        int i;
+        for (i =0; i< current->nodesInserted; i++) {
+            if (val == current->keys[i])return i;
+            if (val < current->keys[i]) {
+                current = current->children[i];
+                break;
+            }
+        }
+        if (i == current->nodesInserted) {
+            current = current->children[current->nodesInserted];
+        }
+    }
+    return -1;
 }
 #endif //BTREE_BTREE_TPP

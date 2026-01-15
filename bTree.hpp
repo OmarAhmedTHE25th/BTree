@@ -13,12 +13,20 @@ class BTree {
     Node* root{};
     T split(Node* node);
     int search(T val);
+    Node* searchNode(T val);
+    Node* findLeaf(T key);
+
+    static bool borrowable(Node* node);
     int MAX_KEYS =3;
     int MAX_CHILDREN = 4;
+    bool isLeaf(Node* node);
 public:
     BTree()=default;
    void insert(T key);
-   void remove(T key);
+
+    static int getChildIdx(Node *node, Node *parent);
+
+    void remove(T key);
 };
 
 #include "bTree.tpp"

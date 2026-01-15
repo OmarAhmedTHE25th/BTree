@@ -6,6 +6,7 @@
 #define BTREE_BTREE_TPP
 #include "bTree.hpp"
 #include <cassert>
+#include <ranges>
 
 template<typename T>
 void BTree<T>::insert(T key) {
@@ -67,6 +68,16 @@ void BTree<T>::insert(T key) {
     current->keys[i + 1] = key;
     ++current->nodesInserted;
 }
+
+template <typename T>
+int BTree<T>::getChildIdx(Node *node, Node *parent) {
+    if (!node)return -1;
+    int idx = 0;
+    while (idx < parent->nodesInserted + 1 && parent->children[idx] != node)
+        idx++;
+    return idx;
+}
+
 template<typename T>
 T BTree<T>::split(Node*node) {
     if (node==root) {
@@ -100,9 +111,7 @@ T BTree<T>::split(Node*node) {
     parent->keys[i + 1] = val;
     Node* left = new Node(node->keys[0]);
     Node* right = new Node(node->keys[2]);
-    int idx = 0;
-    while (idx < parent->nodesInserted + 1 && parent->children[idx] != node)
-        idx++;
+    int idx = getChildIdx(node, parent);
 
     assert(idx <= parent->nodesInserted);
     const int childCount = parent->nodesInserted +1;
@@ -153,8 +162,159 @@ int BTree<T>::search(T val) {
 }
 
 template<typename T>
+bool BTree<T>::isLeaf(Node *node) {
+    if (!node)return false;
+    for (auto child : node->children) {
+        if (child)return false;
+    }
+    return true;
+}
+
+template<typename T>
+ BTree<T>::Node *BTree<T>::searchNode(T val) {
+    Node* current = root;
+    while (current) {
+        int i;
+        for (i =0; i< current->nodesInserted; i++) {
+            if (val == current->keys[i])return current;
+            if (val < current->keys[i]) {
+                current = current->children[i];
+                break;
+            }
+        }
+        if (i == current->nodesInserted) {
+            current = current->children[current->nodesInserted];
+        }
+    }
+    return nullptr;
+}
+
+template<typename T>
+ BTree<T>::Node *BTree<T>::findLeaf(T key) {
+    Node* current = root;
+
+    // We keep going until the current node has no children (is a leaf)
+    while (current && current->children[0] != nullptr) {
+        int i = 0;
+
+        // Find the first key that is >= our target key
+        while (i < current->nodesInserted && key >= current->keys[i]) {
+            i++;
+        }
+
+        // Follow the child pointer at index 'i'
+        // If key < keys[0], i is 0, we go to children[0]
+        // If key > all keys, i is nodesInserted, we go to children[nodesInserted]
+        current = current->children[i];
+    }
+
+    return current; // This is now your leaf node!
+}
+
+template<typename T>
+bool BTree<T>::borrowable(Node *node) {
+    if (!node)return false;
+    if (node->nodesInserted > 1)return true;
+    return false;
+}
+
+template<typename T>
 void BTree<T>::remove(T key) {
-    //case 1: leaf node > 1 key
+    const int idx = search(key);
+    if (idx==-1)return;
+    Node* node = searchNode(key);
+    Node* parent = node->parent;
+    //case 0: node is root node
+    if (node == root && node->nodesInserted == 1) {
+        delete root;
+        root = nullptr;
+        return;
+    }
+    //case 1: leaf node and  > 1 key
+    if (node->nodesInserted > 1 && isLeaf(node)) {
+        for (int i=idx;i< node->nodesInserted-1;++i) {
+            node->keys[i] = node->keys[i+1];
+        }
+        node->keys[MAX_KEYS - 1] = 0;
+        --node->nodesInserted;
+        return;
+    }
+    // case 2: leaf node and 1 key
+    if (node->nodesInserted == 1 && isLeaf(node)) {
+
+        bool canBorrow = false;
+        const int i = getChildIdx(node,parent);
+
+        // check left sibling
+        if (i > 0) {  // there *is* a left sibling
+            Node* leftSib = node->parent->children[i-1];
+            if (borrowable(leftSib)) canBorrow = true;
+        }
+
+        // check right sibling (only if we haven’t found a borrowable sibling yet)
+        if (!canBorrow && i < MAX_CHILDREN-1) {
+            Node* rightSib = node->parent->children[i+1];
+            if (borrowable(rightSib)) canBorrow = true;
+        }
+
+
+        //case 2a: cannot borrow from siblings.
+        if (not canBorrow) {
+            //case 2a.1: node is leftmost child and cannot borrow
+            if (i==0) {
+                Node* rightSib = parent->children[1];
+                if (!rightSib)return;
+                T sep = parent->keys[0];
+                node->keys[1] = sep;
+                parent -> keys[0] = rightSib ->keys[0];
+                ++node->nodesInserted;
+                parent->children[1] = nullptr;
+                delete rightSib;
+                remove(key);
+            }
+            //case 2a.2 node is not leftmost child and cannot borrow
+            Node* leftSib = parent->children[i-1];
+            if (!leftSib)return;
+            T sep = parent->keys[i-1];
+            node->keys[1] = sep;
+            parent -> keys[i-1] = leftSib ->keys[0];
+            ++node->nodesInserted;
+            parent->children[i-1] = nullptr;
+            delete leftSib;
+            remove(key);
+
+        }
+        //case 2b: can borrow from siblings.
+        //case 2b.1 : node is leftmost child
+        if (i==0) {
+            Node* rightSib = parent->children[1];
+            if (!rightSib)return;
+            T sep = parent->keys[0];
+            node->keys[1] = sep;
+            parent -> keys[0] = rightSib ->keys[0];
+            ++node->nodesInserted;
+            for ( int k = 0; k < rightSib->nodesInserted-1; ++k) {
+                rightSib->keys[k] = rightSib->keys[k+1];
+            }
+            rightSib->keys[MAX_KEYS - 1] = 0;
+            --rightSib->nodesInserted;
+            remove(key);
+        }
+        //case 2b.2 : node is not leftmost
+        Node* leftSib = parent->children[i-1];
+        if (!leftSib)return;
+        T sep = parent->keys[i-1];
+        node->keys[1] = sep;
+        parent -> keys[i-1] = leftSib ->keys[0];
+        ++node->nodesInserted;
+        for ( int k = 0; k < leftSib->nodesInserted-1; ++k) {
+            leftSib->keys[k] = leftSib->keys[k+1];
+        }
+        leftSib->keys[MAX_KEYS - 1] = 0;
+        --leftSib->nodesInserted;
+        remove(key);
+    }
+
 
 }
 #endif //BTREE_BTREE_TPP

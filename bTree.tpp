@@ -24,13 +24,16 @@ if (not root){root = new Node(key);return;}
                            break;
                        }
                     if (key<promotedKey) {
+                        assert(current != nullptr);
                         current = leftChild;
                     }
                     else {
+                        assert(current != nullptr);
                         current = rightChild;
                     }
                     break;
                 }
+            assert(current != nullptr);
                 current = current->children[j];
 
         }
@@ -38,19 +41,28 @@ if (not root){root = new Node(key);return;}
             if (current->children[current->nodesInserted] and
      current->children[current->nodesInserted]->nodesInserted == MAX_KEYS)
             {
+                assert(current->children[j] != nullptr);
                T promotedKey = split(current->children[current->nodesInserted]);
                 Node* leftChild = current->children[current->nodesInserted];
                 Node* rightChild = current->children[current->nodesInserted + 1];
                 if (!leftChild || !rightChild) break;
-                if (key<promotedKey)current = leftChild;
-
-                else current = rightChild;
+                if (key<promotedKey) {
+                    assert(current != nullptr);
+                    current = leftChild;
+                }
+                else {
+                    assert(current != nullptr);
+                    current = rightChild;
+                }
 
                 break;
             }
             current = current->children[current->nodesInserted];
         }
     }
+    assert(current != nullptr);
+    assert(current->nodesInserted < MAX_KEYS);
+
         int i=current->nodesInserted - 1;
         while (i >= 0 && key < current->keys[i]) {
             current->keys[i + 1] = current->keys[i];
@@ -70,6 +82,7 @@ T BTree<T>::split(Node*node) {
         Nroot->children[0] = left;
         Nroot->children[1]=  right;
         root = Nroot;
+        assert(root->children[0] != nullptr && root->children[1] != nullptr);
         left->parent = Nroot;
         right->parent = Nroot;
         left ->children[0] = node->children[0];
@@ -94,16 +107,18 @@ T BTree<T>::split(Node*node) {
     Node* left = new Node(node->keys[0]);
     Node* right = new Node(node->keys[2]);
     int idx = 0;
-    while (idx < parent->nodesInserted + 1 && parent->children[idx] != node) {
-        assert(idx <= parent->nodesInserted);
+    while (idx < parent->nodesInserted + 1 && parent->children[idx] != node)
         idx++;
-    }
+
+    assert(idx <= parent->nodesInserted);
     const int childCount = parent->nodesInserted +1;
     for (int k = childCount-1;k > idx; --k) {
+        assert(k+1 < MAX_CHILDREN);
         parent->children[k+1] = parent->children[k];
     }
     parent->children[idx] = left;
     parent->children[idx+1] = right;
+    assert(left != nullptr && right != nullptr);
     left->parent = node->parent;
     right ->parent = node->parent;
     left ->children[0] = node->children[0];
@@ -114,6 +129,8 @@ T BTree<T>::split(Node*node) {
     if (left->children[1])  left->children[1]->parent = left;
     if (right->children[0]) right ->children[0]->parent =right;
     if (right->children[1]) right ->children[1]->parent = right;
+    assert(left->parent == parent && right->parent == parent);
+
     ++parent->nodesInserted;
     if (parent->nodesInserted > 3) {
         split(parent);

@@ -14,6 +14,7 @@ class BTree {
     T split(Node* node);
     int search(T val);
     int MAX_KEYS =3;
+    int MAX_CHILDREN = 4;
 public:
     BTree()=default;
    void insert(T key);

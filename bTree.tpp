@@ -13,8 +13,6 @@ void BTree<T>::insert(T key) {
         root = new Node(key);
         return;
     }
-
-    // Safety: If the root itself is full, split it before doing anything else!
     if (root->nodesInserted == MAX_KEYS) {
         split(root);
     }
@@ -25,14 +23,12 @@ void BTree<T>::insert(T key) {
     while (current && !reachedLeaf) {
         int j;
         for (j = 0; j < current->nodesInserted; j++) {
-            // Check if we need to split a full child as we go down
+
             if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS) {
                 T promotedKey = split(current->children[j]);
-                // Re-evaluate which way to go after the split
                 if (key < promotedKey) current = current->children[j];
                 else current = current->children[j+1];
 
-                // Restart the loop for this node because the keys changed
                 j = -1;
                 continue;
             }
@@ -41,32 +37,28 @@ void BTree<T>::insert(T key) {
                 if (current->children[j]) {
                     current = current->children[j];
                 } else {
-                    reachedLeaf = true; // Stay on this node, it's a leaf!
+                    reachedLeaf = true;
                 }
                 break;
             }
         }
 
-        // If we checked all keys and it's bigger than all of them
         if (!reachedLeaf && j == current->nodesInserted) {
             if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS) {
                 split(current->children[j]);
-                // After split, 'current' stays the same, loop restarts to pick right child
                 continue;
             }
 
             if (current->children[j]) {
                 current = current->children[j];
             } else {
-                reachedLeaf = true; // It's a leaf!
+                reachedLeaf = true;
             }
         }
     }
 
-    // Now current is GUARANTEED to be a valid leaf node pointer
     assert(current != nullptr);
 
-    // Standard insertion into the leaf node
     int i = current->nodesInserted - 1;
     while (i >= 0 && key < current->keys[i]) {
         current->keys[i + 1] = current->keys[i];

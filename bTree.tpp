@@ -11,30 +11,35 @@ template<typename T>
 void BTree<T>::insert(T key) {
 if (not root){root = new Node(key);return;}
     Node* current = root;
-
     while (current) {
         int j;
         for (j =0; j< current->nodesInserted; j++) {
-
-                if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS && key < current->keys[j]){
+            if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS && key < current->keys[j]){
                    T promotedKey = split(current->children[j]);
-                       Node* leftChild = current->children[j];
-                       Node* rightChild = current->children[j+1];
-                       if (leftChild == nullptr || rightChild == nullptr) {
-                           break;
-                       }
-                    if (key<promotedKey) {
-                        assert(current != nullptr);
-                        current = leftChild;
-                    }
-                    else {
-                        assert(current != nullptr);
-                        current = rightChild;
-                    }
-                    break;
+                Node* leftChild = current->children[j];
+                Node* rightChild = nullptr;
+
+                if (j + 1 <= current->nodesInserted) {
+                    rightChild = current->children[j + 1];
+                } else {
+                    rightChild = nullptr;
+                }
+
+                if (!rightChild) {
+                    current = leftChild;
+                } else if (key < promotedKey) {
+                    current = leftChild;
+                } else {
+                    current = rightChild;
+                }
+                break;
                 }
             assert(current != nullptr);
+            if (current->children[j]) {
                 current = current->children[j];
+            } else {
+                current = nullptr;
+            }
 
         }
         if (j == current->nodesInserted) {
@@ -44,20 +49,22 @@ if (not root){root = new Node(key);return;}
                 assert(current->children[j] != nullptr);
                T promotedKey = split(current->children[current->nodesInserted]);
                 Node* leftChild = current->children[current->nodesInserted];
-                Node* rightChild = current->children[current->nodesInserted + 1];
-                if (!leftChild || !rightChild) break;
-                if (key<promotedKey) {
-                    assert(current != nullptr);
-                    current = leftChild;
-                }
-                else {
-                    assert(current != nullptr);
-                    current = rightChild;
+                Node* rightChild = nullptr;
+                if (current->nodesInserted + 1 < MAX_CHILDREN) {
+                    rightChild = current->children[current->nodesInserted + 1];
                 }
 
+                if (!rightChild) current = leftChild;
+                else if (key < promotedKey) current = leftChild;
+                else current = rightChild;
                 break;
+
             }
-            current = current->children[current->nodesInserted];
+            if (current->children[current->nodesInserted]) {
+                current = current->children[current->nodesInserted];
+            } else {
+                current = nullptr;
+            }
         }
     }
     assert(current != nullptr);
@@ -156,5 +163,11 @@ int BTree<T>::search(T val) {
         }
     }
     return -1;
+}
+
+template<typename T>
+void BTree<T>::remove(T key) {
+    //case 1: leaf node > 1 key
+
 }
 #endif //BTREE_BTREE_TPP

@@ -5,29 +5,58 @@
 #ifndef BTREE_BTREE_TPP
 #define BTREE_BTREE_TPP
 #include "bTree.hpp"
-
+#include <cassert>
 
 template<typename T>
-//non full insert
 void BTree<T>::insert(T key) {
 if (not root){root = new Node(key);return;}
-    Node* node = root;
-    if (node->nodesInserted==3) {
-        split(node);
-    }
+    Node* current = root;
 
-int i=node->nodesInserted - 1;
-while (i >= 0 && key < node->keys[i]) {
-        node->keys[i + 1] = node->keys[i];
-        --i;
+    while (current) {
+        int j;
+        for (j =0; j< current->nodesInserted; j++) {
+
+            if (key < current->keys[j]) {
+                if (current->children[j]->nodesInserted==3) {
+                   T promotedKey = split(current->children[j]);
+                    if (key<promotedKey) {
+                        current = current->children[j];
+                    }
+                    else {
+                        current = current->children[j+1];
+                    }
+                    break;
+                }
+                current = current->children[j];
+                break;
+            }
+        }
+        if (j == current->nodesInserted) {
+            if (current->children[current->nodesInserted] == 3) {
+               T promotedKey = split(current->children[current->nodesInserted]);
+                if (key<promotedKey) {
+                    current = current->children[current->nodesInserted];
+                }
+                else {
+                    current = current->children[j+1];
+                }
+                break;
+            }
+            current = current->children[current->nodesInserted];
+        }
     }
-    // insert key
-    node->keys[i + 1] = key;
-    ++node->nodesInserted;
+        int i=current->nodesInserted - 1;
+        while (i >= 0 && key < current->keys[i]) {
+            current->keys[i + 1] = current->keys[i];
+            --i;
+        }
+        // insert key
+        current->keys[i + 1] = key;
+        ++current->nodesInserted;
 }
 
 template<typename T>
-void BTree<T>::split(Node *node) {
+T BTree<T>::split(Node*node) {
     if (node==root) {
         Node* Nroot = new Node(node->keys[1]);
         Node* left = new Node(node->keys[0]);
@@ -41,8 +70,12 @@ void BTree<T>::split(Node *node) {
         left ->children[1] = node->children[1];
         right ->children[0] = node->children[2];
         right ->children[1] = node->children[3];
+        if (left->children[0])left->children[0]->parent = left;
+        if (left->children[1])  left->children[1]->parent = left;
+        if (right->children[0]) right ->children[0]->parent =right;
+        if (right->children[1]) right ->children[1]->parent = right;
         delete node;
-        return;
+        return T();
     }
     Node* parent = node->parent;
     int i=parent->nodesInserted - 1;
@@ -51,14 +84,16 @@ void BTree<T>::split(Node *node) {
         parent->keys[i + 1] = parent->keys[i];
         --i;
     }
-    parent->keys[i + 1] = parent->keys[1];
-    ++parent->nodesInserted;
+    parent->keys[i + 1] = val;
     Node* left = new Node(node->keys[0]);
     Node* right = new Node(node->keys[2]);
     int idx = 0;
-    while (idx <= parent->nodesInserted && parent->children[idx] != node)
+    while (idx < parent->nodesInserted + 1 && parent->children[idx] != node) {
+        assert(idx <= parent->nodesInserted);
         idx++;
-    for (int k = parent->nodesInserted+1;k > idx+1; --k) {
+    }
+    const int childCount = parent->nodesInserted +1;
+    for (int k = childCount-1;k > idx; --k) {
         parent->children[k+1] = parent->children[k];
     }
     parent->children[idx] = left;
@@ -69,10 +104,16 @@ void BTree<T>::split(Node *node) {
     left ->children[1] = node->children[1];
     right ->children[0] = node->children[2];
     right ->children[1] = node->children[3];
-
-
+    if (left->children[0])left->children[0]->parent = left;
+    if (left->children[1])  left->children[1]->parent = left;
+    if (right->children[0]) right ->children[0]->parent =right;
+    if (right->children[1]) right ->children[1]->parent = right;
+    ++parent->nodesInserted;
+    if (parent->nodesInserted > 3) {
+        split(parent);
+    }
     delete node;
-
+  return val;
 }
 
 template<typename T>

@@ -8,10 +8,12 @@
 
 template<typename T>
 class BTree {
+
     using Node = Node<T>;
     Node* root{};
     T split(Node* node);
     int search(T val);
+    int MAX_KEYS =3;
 public:
     BTree()=default;
    void insert(T key);

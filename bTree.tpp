@@ -16,30 +16,36 @@ if (not root){root = new Node(key);return;}
         int j;
         for (j =0; j< current->nodesInserted; j++) {
 
-            if (key < current->keys[j]) {
-                if (current->children[j]->nodesInserted==3) {
+                if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS && key < current->keys[j]){
                    T promotedKey = split(current->children[j]);
+                       Node* leftChild = current->children[j];
+                       Node* rightChild = current->children[j+1];
+                       if (leftChild == nullptr || rightChild == nullptr) {
+                           break;
+                       }
                     if (key<promotedKey) {
-                        current = current->children[j];
+                        current = leftChild;
                     }
                     else {
-                        current = current->children[j+1];
+                        current = rightChild;
                     }
                     break;
                 }
                 current = current->children[j];
-                break;
-            }
+
         }
         if (j == current->nodesInserted) {
-            if (current->children[current->nodesInserted] == 3) {
+            if (current->children[current->nodesInserted] and
+     current->children[current->nodesInserted]->nodesInserted == MAX_KEYS)
+            {
                T promotedKey = split(current->children[current->nodesInserted]);
-                if (key<promotedKey) {
-                    current = current->children[current->nodesInserted];
-                }
-                else {
-                    current = current->children[j+1];
-                }
+                Node* leftChild = current->children[current->nodesInserted];
+                Node* rightChild = current->children[current->nodesInserted + 1];
+                if (!leftChild || !rightChild) break;
+                if (key<promotedKey)current = leftChild;
+
+                else current = rightChild;
+
                 break;
             }
             current = current->children[current->nodesInserted];

@@ -9,77 +9,72 @@
 
 template<typename T>
 void BTree<T>::insert(T key) {
-if (not root){root = new Node(key);return;}
+    if (not root) {
+        root = new Node(key);
+        return;
+    }
+
+    // Safety: If the root itself is full, split it before doing anything else!
+    if (root->nodesInserted == MAX_KEYS) {
+        split(root);
+    }
+
     Node* current = root;
-    while (current) {
+    bool reachedLeaf = false;
+
+    while (current && !reachedLeaf) {
         int j;
-        for (j =0; j< current->nodesInserted; j++) {
-            if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS && key < current->keys[j]){
-                   T promotedKey = split(current->children[j]);
-                Node* leftChild = current->children[j];
-                Node* rightChild = nullptr;
+        for (j = 0; j < current->nodesInserted; j++) {
+            // Check if we need to split a full child as we go down
+            if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS) {
+                T promotedKey = split(current->children[j]);
+                // Re-evaluate which way to go after the split
+                if (key < promotedKey) current = current->children[j];
+                else current = current->children[j+1];
 
-                if (j + 1 <= current->nodesInserted) {
-                    rightChild = current->children[j + 1];
-                } else {
-                    rightChild = nullptr;
-                }
+                // Restart the loop for this node because the keys changed
+                j = -1;
+                continue;
+            }
 
-                if (!rightChild) {
-                    current = leftChild;
-                } else if (key < promotedKey) {
-                    current = leftChild;
+            if (key < current->keys[j]) {
+                if (current->children[j]) {
+                    current = current->children[j];
                 } else {
-                    current = rightChild;
+                    reachedLeaf = true; // Stay on this node, it's a leaf!
                 }
                 break;
-                }
-            assert(current != nullptr);
+            }
+        }
+
+        // If we checked all keys and it's bigger than all of them
+        if (!reachedLeaf && j == current->nodesInserted) {
+            if (current->children[j] && current->children[j]->nodesInserted == MAX_KEYS) {
+                split(current->children[j]);
+                // After split, 'current' stays the same, loop restarts to pick right child
+                continue;
+            }
+
             if (current->children[j]) {
                 current = current->children[j];
             } else {
-                current = nullptr;
-            }
-
-        }
-        if (j == current->nodesInserted) {
-            if (current->children[current->nodesInserted] and
-     current->children[current->nodesInserted]->nodesInserted == MAX_KEYS)
-            {
-                assert(current->children[j] != nullptr);
-               T promotedKey = split(current->children[current->nodesInserted]);
-                Node* leftChild = current->children[current->nodesInserted];
-                Node* rightChild = nullptr;
-                if (current->nodesInserted + 1 < MAX_CHILDREN) {
-                    rightChild = current->children[current->nodesInserted + 1];
-                }
-
-                if (!rightChild) current = leftChild;
-                else if (key < promotedKey) current = leftChild;
-                else current = rightChild;
-                break;
-
-            }
-            if (current->children[current->nodesInserted]) {
-                current = current->children[current->nodesInserted];
-            } else {
-                current = nullptr;
+                reachedLeaf = true; // It's a leaf!
             }
         }
     }
+
+    // Now current is GUARANTEED to be a valid leaf node pointer
     assert(current != nullptr);
-    assert(current->nodesInserted < MAX_KEYS);
 
-        int i=current->nodesInserted - 1;
-        while (i >= 0 && key < current->keys[i]) {
-            current->keys[i + 1] = current->keys[i];
-            --i;
-        }
-        // insert key
-        current->keys[i + 1] = key;
-        ++current->nodesInserted;
+    // Standard insertion into the leaf node
+    int i = current->nodesInserted - 1;
+    while (i >= 0 && key < current->keys[i]) {
+        current->keys[i + 1] = current->keys[i];
+        --i;
+    }
+    current->keys[i + 1] = key;
+    ++current->nodesInserted;
 }
-
 template<typename T>
 T BTree<T>::split(Node*node) {
     if (node==root) {
